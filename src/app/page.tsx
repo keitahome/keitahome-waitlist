@@ -1,0 +1,197 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+
+export default function WaitlistPage() {
+  const [toast, setToast] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const email = new FormData(form).get("email");
+    if (!email || !String(email).includes("@")) {
+      setToast("Please enter a valid email.");
+      return;
+    }
+    setBusy(true);
+    setToast("");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: String(email).trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        duplicate?: boolean;
+      };
+      if (!res.ok) {
+        setToast(data.error || "Something went wrong. Please try again.");
+        return;
+      }
+      setToast(
+        data.duplicate
+          ? "You’re already on the list — thank you."
+          : "You’re on the list — welcome.",
+      );
+      form.reset();
+    } catch {
+      setToast("Could not reach the server. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <style>{`
+        :root {
+          --sand: #ebe4d8;
+          --sand-deep: #e0d6c6;
+          --ink: #2a241c;
+          --ink-soft: #5c5348;
+          --line: #c9bdaa;
+          --white: #faf7f1;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
+        body {
+          min-height: 100vh;
+          font-family: "Outfit", system-ui, sans-serif;
+          color: var(--ink);
+          background:
+            radial-gradient(1200px 700px at 50% -10%, #f4efe6 0%, transparent 55%),
+            linear-gradient(168deg, #f0e9de 0%, var(--sand) 42%, var(--sand-deep) 100%);
+        }
+        .wrap {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2.5rem 1.25rem;
+        }
+        main {
+          width: min(26rem, 100%);
+          text-align: center;
+        }
+        .logo {
+          width: min(9.5rem, 46vw);
+          height: auto;
+          display: block;
+          margin: 0 auto 1.1rem;
+          filter: drop-shadow(0 10px 28px rgba(42, 36, 28, 0.08));
+        }
+        .tagline {
+          margin: 0 0 1.75rem;
+          font-family: "Cormorant Garamond", Georgia, serif;
+          font-weight: 400;
+          font-style: italic;
+          font-size: clamp(1.35rem, 4.2vw, 1.7rem);
+          letter-spacing: 0.04em;
+          color: var(--ink);
+          line-height: 1.2;
+        }
+        .offer {
+          margin: 0 auto 1.75rem;
+          max-width: 22rem;
+          font-weight: 300;
+          font-size: 0.98rem;
+          line-height: 1.55;
+          color: var(--ink-soft);
+          letter-spacing: 0.01em;
+        }
+        form {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          align-items: stretch;
+        }
+        label {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+        input[type="email"] {
+          width: 100%;
+          appearance: none;
+          border: 1px solid var(--line);
+          background: rgba(250, 247, 241, 0.72);
+          color: var(--ink);
+          padding: 0.95rem 1rem;
+          font: 400 0.95rem/1.2 "Outfit", system-ui, sans-serif;
+          letter-spacing: 0.02em;
+          border-radius: 2px;
+          outline: none;
+          transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+        input[type="email"]::placeholder { color: #8a7f70; }
+        input[type="email"]:focus {
+          border-color: #9a8b74;
+          background: var(--white);
+          box-shadow: 0 0 0 3px rgba(154, 139, 116, 0.18);
+        }
+        button {
+          appearance: none;
+          border: none;
+          cursor: pointer;
+          background: var(--ink);
+          color: var(--white);
+          padding: 0.95rem 1.1rem;
+          font: 500 0.78rem/1.2 "Outfit", system-ui, sans-serif;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          border-radius: 2px;
+          transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+        }
+        button:hover { background: #3a3228; }
+        button:active { transform: translateY(1px); }
+        button:disabled { opacity: 0.65; cursor: wait; }
+        .toast {
+          margin-top: 0.85rem;
+          min-height: 1.2rem;
+          font-size: 0.85rem;
+          color: var(--ink-soft);
+          opacity: 0;
+          transition: opacity 0.25s ease;
+        }
+        .toast.show { opacity: 1; }
+      `}</style>
+      <div className="wrap">
+        <main>
+          <img
+            className="logo"
+            src="/keita-logo.png"
+            alt="KeitaHome"
+            width={369}
+            height={439}
+          />
+          <p className="tagline">Softness without borders</p>
+          <p className="offer">
+            Sign up for a 10% discount for when our website is ready for you.
+          </p>
+          <form id="waitlist" noValidate onSubmit={onSubmit}>
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="your email"
+              disabled={busy}
+            />
+            <button type="submit" disabled={busy}>
+              Join the waitlist
+            </button>
+          </form>
+          <p className={`toast${toast ? " show" : ""}`} aria-live="polite">
+            {toast}
+          </p>
+        </main>
+      </div>
+    </>
+  );
+}
